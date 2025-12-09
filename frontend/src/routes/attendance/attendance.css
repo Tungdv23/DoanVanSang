@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .trang-cham-cong {
+    @apply flex min-h-screen flex-col items-center bg-slate-50 px-4 py-8 text-slate-800;
+  }
+
+  .khung-noi-dung-cham-cong {
+    @apply w-full max-w-5xl rounded-3xl bg-white p-8 shadow-2xl shadow-slate-200;
+  }
+
+  .phan-dau-cham-cong {
+    @apply text-center;
+  }
+
+  .nhan-nho {
+    @apply text-xs font-semibold uppercase tracking-[0.3em] text-blue-500;
+  }
+
+  .tieu-de-cham-cong {
+    @apply mt-3 text-4xl font-bold text-slate-900;
+  }
+
+  .mo-ta-cham-cong {
+    @apply mx-auto mt-3 max-w-2xl text-base text-slate-500;
+  }
+
+  .noi-dung-cham-cong {
+    @apply mt-8 grid gap-8 lg:grid-cols-[3fr_2fr];
+  }
+
+  .khoi-camera {
+    @apply rounded-3xl border border-slate-100 bg-slate-50/70 p-6;
+  }
+
+  .khung-camera {
+    @apply h-72 rounded-3xl border border-dashed border-slate-200 bg-white/70 p-4;
+  }
+
+  .thong-bao {
+    @apply mt-4 rounded-2xl border px-4 py-3 text-sm font-semibold;
+  }
+
+  .thong-bao-thanh-cong {
+    @apply border-green-100 bg-green-50 text-green-700;
+  }
+
+  .thong-bao-thong-tin {
+    @apply border-blue-100 bg-blue-50 text-blue-700;
+  }
+
+  .Nut-xac-nhan {
+    @apply mt-6 flex flex-wrap gap-4;
+  }
+
+  .nut-check-in {
+    @apply flex flex-1 items-center justify-center rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-green-200 transition hover:from-green-600 hover:to-emerald-600;
+  }
+
+  .nut-check-out {
+    @apply flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900;
+  }
+
+  .thong-tin-nhan-vien {
+    @apply flex flex-col gap-6 rounded-3xl border border-slate-100 bg-slate-50/70 p-6;
+  }
+
+  .ten-nhan-vien {
+    @apply mt-1 text-3xl font-bold text-slate-900;
+  }
+
+  .chuc-vu {
+    @apply text-sm text-slate-500;
+  }
+
+  .bang-thong-tin {
+    @apply grid grid-cols-2 gap-4 text-sm text-slate-600;
+  }
+
+  .bang-thong-tin dt {
+    @apply text-xs uppercase text-slate-400;
+  }
+
+  .bang-thong-tin dd {
+    @apply mt-1 font-semibold text-slate-900;
+  }
+
+  .trang-thai-xanh {
+    @apply text-emerald-600;
+  }
+
+  .trang-thai-xam {
+    @apply text-slate-500;
+  }
+
+  .chan-trang-cham-cong {
+    @apply mt-8 flex flex-wrap items-center justify-between gap-4 text-sm text-slate-500;
+  }
+
+  .nut-quay-lai {
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 font-semibold text-slate-700 hover:border-slate-300 hover:text-slate-900;
+  }
+
+  .ban-quyen {
+    @apply text-xs text-slate-400;
+  }
+}

@@ -1,0 +1,330 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .nen-trang-chao {
+    @apply min-h-screen bg-gradient-to-b from-[#edf3ff] to-[#f8fafc] px-4 pb-8 pt-4 sm:px-6;
+  }
+
+  .khung-noi-dung-trang {
+    @apply mx-auto max-w-6xl;
+  }
+
+  .than-dieu-huong {
+    @apply flex items-center justify-between rounded-3xl bg-white/90 px-5 py-3 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur;
+  }
+
+  .logo-hr {
+    @apply flex h-10 w-10 items-center justify-center rounded-2xl bg-[#2264dc] text-lg font-bold text-white shadow-lg shadow-blue-200;
+  }
+
+  .cum-can-giua {
+    @apply flex items-center gap-3;
+  }
+
+  .chu-logo {
+    @apply text-lg font-semibold text-slate-900;
+  }
+
+  .menu-dieu-huong {
+    @apply hidden items-center gap-6 text-sm font-medium text-slate-500 md:flex;
+  }
+
+  .nut-menu {
+    @apply transition hover:text-slate-900;
+  }
+
+  .nut-che-do {
+    @apply flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500;
+  }
+
+  .le-phai-nho {
+    @apply mr-2;
+  }
+
+  .nut-che-do-noi-bat {
+    @apply rounded-full bg-slate-100 px-2 py-0.5 text-slate-900;
+  }
+
+  .nut-dang-ky {
+    @apply rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700;
+  }
+
+  .phan-anh-hung {
+    @apply mt-6 flex flex-col gap-5 rounded-[28px] bg-white px-8 py-8 shadow-[0_20px_60px_rgba(15,23,42,0.08)];
+  }
+
+  .hang-chao-mung {
+    @apply flex flex-col gap-4 lg:flex-row lg:items-center;
+  }
+
+  .noi-dung-anh-hung {
+    @apply text-left;
+  }
+
+  .tieu-de-phu {
+    @apply text-sm font-semibold text-[#6498ff];
+  }
+
+  .tieu-de-chao {
+    @apply mt-3 text-4xl font-bold text-slate-900 sm:text-[42px];
+  }
+
+  .doan-mo-ta-chao {
+    @apply mt-3 text-base text-slate-500;
+  }
+
+  .hop-faceid-tong {
+    @apply mt-4 flex gap-4 rounded-2xl bg-slate-50 p-3;
+  }
+
+  .the-faceid-trai {
+    @apply flex-1 rounded-2xl bg-white p-3 shadow-md;
+  }
+
+  .chu-nho-dam-xam {
+    @apply text-sm font-semibold text-slate-600;
+  }
+
+  .anh-faceid-trai {
+    @apply h-14 w-14 rounded-2xl border border-slate-100 object-cover;
+  }
+
+  .hang-noi-dung-nho {
+    @apply mt-3 flex items-center gap-3;
+  }
+
+  .chu-nho-dam-den {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .chu-sieu-nho-xam {
+    @apply text-xs text-slate-500;
+  }
+
+  .the-bao-mat-phai {
+    @apply flex flex-col justify-between rounded-2xl bg-[#f7fbff] p-3 text-sm text-slate-500;
+  }
+
+  .nhan-bao-mat {
+    @apply text-xs uppercase tracking-widest text-[#6498ff];
+  }
+
+  .chu-bao-mat {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .hop-anh-thu-nho {
+    @apply w-full max-w-sm self-start rounded-[20px] border border-slate-100 bg-slate-50 p-3 aspect-square flex flex-col lg:ml-8;
+  }
+
+  .the-thong-tin-nhan-vien {
+    @apply rounded-[20px] bg-white p-5 shadow-md;
+  }
+
+  .dong-nhan-vien {
+    @apply flex items-center gap-4;
+  }
+
+  .anh-dai-dien-mo-phong {
+    @apply h-12 w-12 rounded-full bg-slate-100;
+  }
+
+  .ten-nhan-vien {
+    @apply text-sm font-semibold text-slate-900;
+  }
+
+  .chuc-danh-nhan-vien {
+    @apply text-xs text-slate-500;
+  }
+
+  .trang-thai-checkin {
+    @apply ml-auto rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700;
+  }
+
+  .the-nhan-dien-khuon-mat {
+    @apply mt-4 rounded-2xl border border-slate-100 p-3;
+  }
+
+  .dong-nhan-dien {
+    @apply flex items-center justify-between text-sm text-slate-500;
+  }
+
+  .anh-nhan-dien {
+    @apply mt-3 w-full rounded-xl border border-slate-100;
+  }
+
+  .vung-the-chuc-nang {
+    @apply mt-6 grid gap-4 lg:grid-cols-2;
+  }
+
+  .the-cham-cong {
+    @apply rounded-[24px] bg-gradient-to-br from-[#3d8bff] to-[#74c1ff] p-6 text-white shadow-[0_18px_40px_rgba(61,139,255,0.3)] transform transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_26px_50px_rgba(61,139,255,0.45)];
+  }
+
+  .the-quan-tri {
+    @apply rounded-[24px] bg-gradient-to-br from-[#1dc8a9] via-[#20b7c6] to-[#1a9ad6] p-6 text-white shadow-[0_18px_40px_rgba(26,154,214,0.35)] transform transition-all duration-300 ease-out hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_26px_50px_rgba(26,154,214,0.45)];
+  }
+
+  .tieu-de-the {
+    @apply flex items-center justify-between text-sm;
+  }
+
+  .dong-tieu-de-the {
+    @apply font-semibold tracking-wide;
+  }
+
+  .bieu-tuong-the {
+    @apply text-2xl;
+  }
+
+  .ten-the {
+    @apply mt-2 text-2xl font-bold;
+  }
+
+  .bieu-tuong-huy-hieu {
+    @apply text-3xl;
+  }
+
+  .mo-ta-the {
+    @apply mt-3 text-sm text-white/80;
+  }
+
+  .vung-nut-hanh-dong {
+    @apply mt-4 flex flex-wrap gap-3;
+  }
+
+  .nut-trang-cham-cong,
+  .nut-trang-quan-tri {
+    @apply rounded-full bg-white px-5 py-2 text-sm font-semibold text-slate-900 shadow-lg;
+  }
+
+  .nut-trang-cham-cong {
+    @apply shadow-blue-200;
+  }
+
+  .nut-trang-quan-tri {
+    @apply shadow-cyan-200;
+  }
+
+  .nut-phu {
+    @apply rounded-full border border-white/40 px-5 py-2 text-sm font-medium text-white/80 hover:text-white;
+  }
+
+  .danh-sach-huy-hieu {
+    @apply mt-6 flex flex-wrap gap-4 rounded-[22px] bg-white/90 px-6 py-4 shadow-[0_15px_40px_rgba(15,23,42,0.06)];
+  }
+
+  .huy-hieu {
+    @apply flex min-w-[180px] flex-1 flex-col items-center text-center;
+  }
+
+  .chu-huy-hieu {
+    @apply mt-2 text-sm font-semibold text-slate-900;
+  }
+
+  .mo-ta-huy-hieu {
+    @apply text-xs text-slate-500;
+  }
+
+  .chan-trang-trang-chao {
+    @apply mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[22px] bg-white px-6 py-4 text-sm text-slate-500 shadow-[0_15px_40px_rgba(15,23,42,0.08)];
+  }
+
+  .logo-chan-trang {
+    @apply flex items-center gap-2 text-slate-900;
+  }
+
+  .bieu-tuong-chan-trang {
+    @apply flex h-9 w-9 items-center justify-center rounded-2xl bg-[#2264dc] text-white;
+  }
+
+  .menu-chan-trang {
+    @apply flex flex-wrap gap-6;
+  }
+
+  .lop-phu-dang-nhap {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4;
+  }
+
+  .hop-dang-nhap {
+    @apply flex w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl;
+  }
+
+  .phan-chao-dang-nhap {
+    @apply hidden w-1/2 flex-col justify-between bg-white p-10 text-slate-900 lg:flex border-r border-slate-100;
+  }
+
+  .tieu-de-dang-nhap {
+    @apply text-2xl font-bold text-slate-900;
+  }
+
+  .mo-ta-dang-nhap {
+    @apply mt-4 text-sm text-slate-600;
+  }
+
+  .anh-dang-nhap {
+    @apply mt-6 rounded-2xl border border-slate-200 p-4 bg-white shadow-sm;
+  }
+
+  .cot-dang-nhap {
+    @apply relative w-full p-8 lg:w-1/2;
+  }
+
+  .nut-dong-modal {
+    @apply absolute right-4 top-4 text-slate-400 transition hover:text-slate-600;
+  }
+
+  .phan-dau-form {
+    @apply mb-6;
+  }
+
+  .nhan-form {
+    @apply text-xs font-semibold uppercase tracking-widest text-blue-500;
+  }
+
+  .tieu-de-form {
+    @apply mt-2 text-2xl font-bold text-slate-900;
+  }
+
+  .mo-ta-form {
+    @apply mt-1 text-sm text-slate-500;
+  }
+
+  .form-dang-nhap {
+    @apply space-y-4;
+  }
+
+  .nhan-truong {
+    @apply block text-sm font-semibold text-slate-700;
+  }
+
+  .truong-nhap {
+    @apply mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200;
+  }
+
+  .thong-bao-loi {
+    @apply rounded-2xl border border-red-100 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600;
+  }
+
+  .dong-tuy-chon {
+    @apply flex items-center justify-between text-sm text-slate-600;
+  }
+
+  .tuy-chon-nho {
+    @apply flex items-center gap-2;
+  }
+
+  .nut-phu-tro {
+    @apply text-sm font-semibold text-blue-600 hover:text-blue-500;
+  }
+
+  .nut-dang-nhap {
+    @apply w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800;
+  }
+
+  .ghi-chu-demo {
+    @apply text-center text-xs text-slate-400;
+  }
+}
