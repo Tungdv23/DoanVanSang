@@ -8,7 +8,8 @@ export type AttendanceEvent = {
 const HISTORY_KEY = (employeeId: string) => `attendanceHistory:${employeeId}`;
 export const HISTORY_LIMIT = 200;
 
-export const SIMULATION_RATIO = 1; // giữ nguyên theo thời gian thực
+// Demo: 1 giây thực tế ≈ 5 giờ công => ratio = 5 * 3600
+export const SIMULATION_RATIO = 18000;
 const LUNCH_BREAK_HOURS = 1;
 
 export const calculateSimulatedHours = (inTime: Date, outTime: Date) => {

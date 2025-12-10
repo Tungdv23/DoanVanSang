@@ -256,24 +256,53 @@ export const attendanceService = {
     }
   },
   checkInWithFace: async (payload: FaceCheckPayload) => {
+    // Nới lỏng ngưỡng mặc định khi gọi backend: 0.6
+    const requestPayload: FaceCheckPayload = {
+      ...payload,
+      threshold: payload.threshold ?? 0.6,
+    };
+
+    // Nếu không cấu hình Supabase, bỏ qua bước Supabase và gọi thẳng API backend rồi fallback local
+    if (!supabase) {
+      try {
+        const response = await postJson<FaceCheckResponse>('/checkin', requestPayload);
+        return { ...response, source: 'remote' as const };
+      } catch (apiError) {
+        console.warn('Gọi API checkin thất bại, dùng local storage.', apiError);
+        return fallbackCheck(requestPayload);
+      }
+    }
+
     try {
       const remoteRows = await fetchRemoteEmbeddings();
       if (remoteRows.length) {
-        return buildCheckResponse(remoteRows, payload, 'remote');
+        return buildCheckResponse(remoteRows, requestPayload, 'remote');
       }
       throw new Error('Không có dữ liệu khuôn mặt trên Supabase.');
     } catch (error) {
       console.warn('Không kiểm tra được khuôn mặt bằng Supabase, thử API backend.', error);
       try {
-        const response = await postJson<FaceCheckResponse>('/checkin', payload);
+        const response = await postJson<FaceCheckResponse>('/checkin', requestPayload);
         return { ...response, source: 'remote' as const };
       } catch (apiError) {
         console.warn('Gọi API checkin thất bại, dùng local storage.', apiError);
-        return fallbackCheck(payload);
+        return fallbackCheck(requestPayload);
       }
     }
   },
   hasFaceEnrollment: async (employeeId: string) => {
+    if (!supabase) {
+      try {
+        const response = await getJson<{ registered: boolean }>(
+          `/employees/${employeeId}/face`
+        );
+        if (response?.registered) return true;
+      } catch (error) {
+        console.warn('Không kiểm tra được trạng thái khuôn mặt từ backend.', error);
+      }
+      return getLocalEmbeddings().some((row) => row.employeeId === employeeId);
+    }
+
     try {
       const remote = await fetchRemoteEmbeddings(employeeId);
       if (remote.length) return true;
@@ -322,6 +351,7 @@ export const attendanceService = {
     threshold,
     source,
   }: FaceCheckResponse) => {
+    if (!supabase) return;
     try {
       const { error } = await supabase.from('attendance_records').insert({
         employee_id: employeeId,
@@ -337,6 +367,8 @@ export const attendanceService = {
     }
   },
   fetchAttendanceHistory: async (employeeId: string, limit = 200): Promise<AttendanceEvent[]> => {
+    // Không có Supabase -> không thể lấy lịch sử từ remote, trả mảng rỗng
+    if (!supabase) return [];
     try {
       const { data, error } = await supabase
         .from('attendance_records')

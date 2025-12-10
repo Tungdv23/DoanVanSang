@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabaseClient';
+import { apiFetch, buildApiUrl } from './api';
 
 export type MonthlyPayrollRow = {
   id: string;
@@ -56,18 +57,64 @@ export const payrollService = {
     }
   },
   async fetchMonthlyPayrolls(employeeId: string, year: number) {
-    if (!supabase) return [] as MonthlyPayrollRow[];
-    const { data, error } = await supabase
-      .from('monthly_payrolls')
-      .select('*')
-      .eq('employee_id', employeeId)
-      .eq('year', year)
-      .order('month', { ascending: true });
-    if (error) {
-      console.warn('Không lấy được monthly_payrolls.', error);
+    // Supabase path
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('monthly_payrolls')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('year', year)
+        .order('month', { ascending: true });
+      if (error) {
+        console.warn('Không lấy được monthly_payrolls.', error);
+        return [] as MonthlyPayrollRow[];
+      }
+      return (data as MonthlyPayrollRow[]) ?? [];
+    }
+
+    // REST fallback: gọi backend /api/payroll-report cho từng tháng và map về MonthlyPayrollRow
+    try {
+      const months = Array.from({ length: 12 }, (_, idx) => idx + 1);
+      const rows = await Promise.all(
+        months.map(async (month) => {
+          const payload = await apiFetch<
+            Array<{
+              employeeId: string | number;
+              code: string;
+              name: string;
+              baseSalary: number;
+              totalHours: number;
+              overtimeHours: number;
+              overtimePay: number;
+              finalSalary: number;
+            }>
+          >(buildApiUrl(`/payroll-report?month=${month}&year=${year}`));
+          const matched = payload.find((row) => String(row.employeeId) === String(employeeId));
+          if (!matched) return null;
+          return {
+            id: `${employeeId}-${year}-${month}`,
+            employee_id: String(employeeId),
+            year,
+            month,
+            total_hours: Number(matched.totalHours ?? 0),
+            overtime_hours: Number(matched.overtimeHours ?? 0),
+            base_salary: Number(matched.baseSalary ?? 0),
+            overtime_pay: Number(matched.overtimePay ?? 0),
+            total_pay: Number(
+              matched.finalSalary ??
+                matched.baseSalary ??
+                matched.totalHours ??
+                0
+            ),
+            status: 'approved',
+          } as MonthlyPayrollRow;
+        })
+      );
+      return rows.filter((row): row is MonthlyPayrollRow => Boolean(row));
+    } catch (error) {
+      console.warn('Không lấy được dữ liệu payroll từ backend REST.', error);
       return [] as MonthlyPayrollRow[];
     }
-    return (data as MonthlyPayrollRow[]) ?? [];
   },
   async removeFuturePayrolls(cutoffYear: number, cutoffMonth?: number) {
     try {

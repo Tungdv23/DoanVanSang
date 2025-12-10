@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { generateEmployeeCode, euclideanDistance } = require('../utils/employeeUtils');
-const { differenceInMinutes } = require('date-fns');
+const { differenceInMinutes, differenceInSeconds } = require('date-fns');
 
 // --- HÀM HỖ TRỢ LẤY ID TỪ TÊN (Giữ nguyên) ---
 async function getDeptPosIds(deptName, posName) {
@@ -138,8 +138,15 @@ router.post('/enroll-face', async (req, res) => {
 
 // --- API: CHẤM CÔNG (FIX LỖI NHẬN DIỆN KHUÔN MẶT) ---
 router.post('/checkin', async (req, res) => {
-    // ĐẶT NGƯỠNG AN TOÀN TỐI ĐA ĐỂ ĐẢM BẢO NHẬN DIỆN CHO BÀI TẬP LỚN
-    const { embedding, type, threshold = 0.8 } = req.body; 
+    // Nới lỏng ngưỡng nhận diện để dễ khớp hơn
+    const { embedding, type, threshold = 0.6 } = req.body; 
+
+    const computeScaledHours = (checkinTime, checkoutTime) => {
+        const seconds = Math.max(1, differenceInSeconds(checkoutTime, checkinTime));
+        // Demo: 1 giây thực tế = 5 giờ công => SCALE_FACTOR = 5 * 3600
+        const SCALE_FACTOR = 18000;
+        return parseFloat(((seconds / 3600) * SCALE_FACTOR).toFixed(2));
+    };
 
     try {
         // 1. Nhận diện khuôn mặt
@@ -177,13 +184,19 @@ router.post('/checkin', async (req, res) => {
         const today = now.toISOString().split('T')[0];
 
         if (type === 'checkin') {
+            // Nếu còn phiên mở, tự động checkout phiên cũ rồi mở phiên mới
             const [existing] = await db.query(
-                "SELECT id FROM attendance WHERE employee_id = ? AND date_log = ? AND checkout_time IS NULL",
+                "SELECT id, checkin_time FROM attendance WHERE employee_id = ? AND date_log = ? AND checkout_time IS NULL ORDER BY checkin_time DESC LIMIT 1",
                 [empId, today]
             );
-
             if (existing.length > 0) {
-                return res.status(400).json({ error: "Bạn chưa Check-out ca làm việc trước đó!" });
+                const sessionId = existing[0].id;
+                const checkinTime = new Date(existing[0].checkin_time);
+                const hours = computeScaledHours(checkinTime, now);
+                await db.query(
+                    "UPDATE attendance SET checkout_time = ?, total_hours = ? WHERE id = ?",
+                    [now, hours, sessionId]
+                );
             }
             await db.query(
                 "INSERT INTO attendance (employee_id, checkin_time, date_log) VALUES (?, ?, ?)",
@@ -202,9 +215,7 @@ router.post('/checkin', async (req, res) => {
 
             const sessionId = openSession[0].id;
             const checkinTime = new Date(openSession[0].checkin_time);
-            
-            const minutes = differenceInMinutes(now, checkinTime);
-            const hours = parseFloat((minutes / 60).toFixed(2));
+            const hours = computeScaledHours(checkinTime, now);
 
             await db.query(
                 "UPDATE attendance SET checkout_time = ?, total_hours = ? WHERE id = ?",
@@ -226,17 +237,45 @@ router.post('/checkin', async (req, res) => {
 });
 
 
-// GET /api/payroll-report (TÍNH LƯƠNG THEO CÔNG THỨC 40 GIỜ)
+// GET /api/payroll-report
+// Tính lương trực tiếp từ bảng attendance (đã có total_hours sau khi scale), đồng bộ với giờ thực tế ghi nhận.
 router.get('/payroll-report', async (req, res) => {
     const { month, year } = req.query; 
 
     if (!month || !year) return res.status(400).json({ error: "Vui lòng cung cấp tháng và năm." });
 
     try {
+        // Tính từ attendance với total_hours đã scale
         const [employees] = await db.query("SELECT id, name, code, salary FROM employees");
         const payrollData = [];
 
         for (const emp of employees) {
+            let totalHours = 0;
+
+            // Nếu là 3 nhân viên đầu (ID 1-3) và tháng 1-11: lấy từ payroll_history (payment enroll)
+            if (Number(emp.id) <= 3 && Number(month) <= 11) {
+                const [hist] = await db.query(
+                    `SELECT final_salary, total_hours
+                     FROM payroll_history
+                     WHERE employee_id = ? AND report_month = ? AND report_year = ?`,
+                    [emp.id, month, year]
+                );
+                if (hist.length) {
+                    payrollData.push({
+                        employeeId: emp.id,
+                        code: emp.code,
+                        name: emp.name,
+                        baseSalary: Number(emp.salary),
+                        totalHours: Number(hist[0].total_hours ?? 0),
+                        overtimeHours: 0,
+                        overtimePay: 0,
+                        finalSalary: Number(hist[0].final_salary ?? 0),
+                    });
+                    continue;
+                }
+            }
+
+            // Các trường hợp còn lại (hoặc tháng 12): tính từ attendance (đã scale)
             const sqlSumHours = `
                 SELECT SUM(total_hours) as total 
                 FROM attendance 
@@ -245,22 +284,14 @@ router.get('/payroll-report', async (req, res) => {
                 AND YEAR(date_log) = ?
             `;
             const [rows] = await db.query(sqlSumHours, [emp.id, month, year]);
-            const totalHours = rows[0].total || 0;
+            totalHours = rows[0].total || 0;
 
             const baseSalary = Number(emp.salary);
-            let finalSalary = 0;
-            let overtimePay = 0;
-            let overtimeHours = 0;
-            const standardHours = 40; 
-
-            if (totalHours <= standardHours) {
-                finalSalary = baseSalary;
-            } else {
-                overtimeHours = totalHours - standardHours;
-                const hourlyRate = baseSalary / standardHours; 
-                overtimePay = overtimeHours * hourlyRate * 1.5; 
-                finalSalary = baseSalary + overtimePay;
-            }
+            const hourlyRate = baseSalary / 160;
+            const hasBaseSalary = totalHours >= 40;
+            const overtimeHours = hasBaseSalary ? Math.max(0, totalHours - 40) : 0;
+            const overtimePay = hasBaseSalary ? overtimeHours * hourlyRate : 0;
+            const finalSalary = hasBaseSalary ? baseSalary + overtimePay : 0;
 
             payrollData.push({
                 employeeId: emp.id,
