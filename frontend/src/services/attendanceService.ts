@@ -146,6 +146,7 @@ const normalizeEmbedding = (value: unknown): number[] => {
 };
 
 const fetchRemoteEmbeddings = async (employeeId?: string) => {
+  if (!supabase) return [];
   try {
     let query = supabase
       .from('face_embeddings')
@@ -172,6 +173,9 @@ const fetchRemoteEmbeddings = async (employeeId?: string) => {
 };
 
 const saveRemoteEmbedding = async (payload: EnrollFacePayload) => {
+  if (!supabase) {
+    throw new Error('Supabase client not configured');
+  }
   const { data, error } = await supabase
     .from('face_embeddings')
     .upsert(
@@ -229,17 +233,20 @@ export const attendanceService = {
   list: async () => [],
   enrollFace: async (payload: EnrollFacePayload) => {
     try {
-      const createdAt = await saveRemoteEmbedding(payload);
-      storeLocalEmbedding(payload);
-      return {
-        employeeId: payload.employeeId,
-        createdAt,
-        source: 'remote' as const,
-      };
+      if (supabase) {
+        const createdAt = await saveRemoteEmbedding(payload);
+        storeLocalEmbedding(payload);
+        return {
+          employeeId: payload.employeeId,
+          createdAt,
+          source: 'remote' as const,
+        };
+      }
+      throw new Error('Supabase client not configured');
     } catch (error) {
       console.warn('Không thể lưu face_embeddings lên Supabase, thử API backend.', error);
       try {
-        const response = await postJson<EnrollFaceResponse>('/api/enroll-face', payload);
+        const response = await postJson<EnrollFaceResponse>('/enroll-face', payload);
         storeLocalEmbedding(payload);
         return { ...response, source: 'remote' as const };
       } catch (apiError) {
@@ -258,7 +265,7 @@ export const attendanceService = {
     } catch (error) {
       console.warn('Không kiểm tra được khuôn mặt bằng Supabase, thử API backend.', error);
       try {
-        const response = await postJson<FaceCheckResponse>('/api/checkin', payload);
+        const response = await postJson<FaceCheckResponse>('/checkin', payload);
         return { ...response, source: 'remote' as const };
       } catch (apiError) {
         console.warn('Gọi API checkin thất bại, dùng local storage.', apiError);
@@ -275,7 +282,7 @@ export const attendanceService = {
     }
     try {
       const response = await getJson<{ registered: boolean }>(
-        `/api/employees/${employeeId}/face`
+        `/employees/${employeeId}/face`
       );
       if (response?.registered) return true;
     } catch (error) {
@@ -287,7 +294,9 @@ export const attendanceService = {
   clearLocalEmbedding: (employeeId: string) => {
     const next = getLocalEmbeddings().filter((row) => row.employeeId !== employeeId);
     saveLocalEmbeddings(next);
-    void supabase.from('face_embeddings').delete().eq('employee_id', employeeId);
+    if (supabase) {
+      void supabase.from('face_embeddings').delete().eq('employee_id', employeeId);
+    }
   },
   getLocalEmbeddings,
   computeDistance: euclideanDistance,

@@ -1,12 +1,16 @@
-import { supabase } from '@/lib/supabaseClient';
+import { apiFetch, buildApiUrl } from './api';
 
 const STORAGE_KEY = 'positionsData';
 
 type SupabasePositionRow = {
-  id: string;
-  code: string;
-  name: string;
+  id: string | number;
+  code?: string;
+  name?: string;
   description?: string | null;
+  ma_chuc_vu?: string;
+  ten_chuc_vu?: string;
+  mo_ta?: string | null;
+  trang_thai?: string;
 };
 
 export type PositionViewModel = {
@@ -72,15 +76,18 @@ export const positionsService = {
   async list(seed?: PositionViewModel[]): Promise<PositionViewModel[]> {
     const cached = ensureSeed(seed);
     try {
-      if (!supabase) {
-        return cached;
-      }
-      const { data, error } = await supabase
-        .from('positions')
-        .select('id, code, name, description')
-        .order('name', { ascending: true });
-      if (error) throw error;
-      const mapped = mergeVisibility((data ?? []).map(toViewModel), cached);
+      const data = await apiFetch<SupabasePositionRow[]>(buildApiUrl('/positions'));
+      const mapped = mergeVisibility(
+        (data ?? []).map((row) =>
+          toViewModel({
+            id: String(row.id),
+            code: row.code ?? (row.ma_chuc_vu as string),
+            name: row.name ?? (row.ten_chuc_vu as string),
+            description: row.description ?? row.mo_ta ?? '',
+          })
+        ),
+        cached
+      );
       saveLocal(mapped);
       return mapped;
     } catch (error) {
@@ -89,7 +96,29 @@ export const positionsService = {
     }
   },
   async create(payload: { maChucVu: string; tenChucVu: string; moTa?: string }): Promise<PositionViewModel> {
-    if (!supabase) {
+    try {
+      const { id } = await apiFetch<{ id: string }>(buildApiUrl('/positions'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maChucVu: payload.maChucVu,
+          tenChucVu: payload.tenChucVu,
+          moTa: payload.moTa,
+          trangThai: 'active',
+        }),
+      });
+      const record: PositionViewModel = {
+        id: id ?? crypto.randomUUID?.() ?? Date.now().toString(),
+        maChucVu: payload.maChucVu,
+        tenChucVu: payload.tenChucVu,
+        moTa: payload.moTa ?? '',
+        visible: true,
+      };
+      const next = [...getLocal(), record];
+      saveLocal(next);
+      return record;
+    } catch (error) {
+      console.warn('Không thể tạo chức vụ trên backend, lưu local.', error);
       const record: PositionViewModel = {
         id: crypto.randomUUID?.() ?? Date.now().toString(),
         maChucVu: payload.maChucVu,
@@ -101,25 +130,37 @@ export const positionsService = {
       saveLocal(next);
       return record;
     }
-    const { data, error } = await supabase
-      .from('positions')
-      .insert({
-        code: payload.maChucVu,
-        name: payload.tenChucVu,
-        description: payload.moTa ?? null,
-      })
-      .select('id, code, name, description')
-      .single();
-    if (error || !data) {
-      throw error ?? new Error('Không thể tạo chức vụ.');
-    }
-    return toViewModel(data);
   },
   async update(
     positionId: string,
     payload: Partial<{ maChucVu: string; tenChucVu: string; moTa?: string }>
   ): Promise<PositionViewModel> {
-    if (!supabase) {
+    try {
+      await apiFetch(buildApiUrl(`/positions/${positionId}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maChucVu: payload.maChucVu,
+          tenChucVu: payload.tenChucVu,
+          moTa: payload.moTa,
+        }),
+      });
+      const updated = getLocal().map((row) =>
+        row.id === positionId
+          ? {
+              ...row,
+              maChucVu: payload.maChucVu ?? row.maChucVu,
+              tenChucVu: payload.tenChucVu ?? row.tenChucVu,
+              moTa: payload.moTa ?? row.moTa,
+            }
+          : row
+      );
+      saveLocal(updated);
+      const found = updated.find((r) => r.id === positionId);
+      if (!found) throw new Error('Không tìm thấy chức vụ để cập nhật (local).');
+      return found;
+    } catch (error) {
+      console.warn('Không thể cập nhật chức vụ trên backend, lưu local.', error);
       const updated = getLocal().map((row) =>
         row.id === positionId
           ? {
@@ -135,28 +176,16 @@ export const positionsService = {
       if (!found) throw new Error('Không tìm thấy chức vụ để cập nhật (local).');
       return found;
     }
-    const body: Record<string, unknown> = {};
-    if (payload.maChucVu !== undefined) body.code = payload.maChucVu;
-    if (payload.tenChucVu !== undefined) body.name = payload.tenChucVu;
-    if (payload.moTa !== undefined) body.description = payload.moTa;
-    const { data, error } = await supabase
-      .from('positions')
-      .update(body)
-      .eq('id', positionId)
-      .select('id, code, name, description')
-      .single();
-    if (error || !data) {
-      throw error ?? new Error('Không thể cập nhật chức vụ.');
-    }
-    return toViewModel(data);
   },
   async remove(positionId: string): Promise<void> {
-    if (!supabase) {
+    try {
+      await apiFetch(buildApiUrl(`/positions/${positionId}`), { method: 'DELETE' });
       const next = getLocal().filter((row) => row.id !== positionId);
       saveLocal(next);
-      return;
+    } catch (error) {
+      console.warn('Không thể xóa chức vụ trên backend, lưu local.', error);
+      const next = getLocal().filter((row) => row.id !== positionId);
+      saveLocal(next);
     }
-    const { error } = await supabase.from('positions').delete().eq('id', positionId);
-    if (error) throw error;
   },
 };

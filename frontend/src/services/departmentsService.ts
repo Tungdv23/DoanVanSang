@@ -1,5 +1,5 @@
 import type { DepartmentStatus } from './types';
-import { supabase } from '@/lib/supabaseClient';
+import { apiFetch, buildApiUrl } from './api';
 
 const STORAGE_KEY = 'departmentsData';
 
@@ -100,16 +100,26 @@ export const departmentsService = {
   async list(seed?: DepartmentViewModel[]): Promise<DepartmentViewModel[]> {
     const cached = ensureSeedData(seed);
     try {
-      if (!supabase) {
-        // Không có Supabase: trả cache/local seed
-        return cached;
-      }
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, code, name, founded_year, status')
-        .order('name', { ascending: true });
-      if (error) throw error;
-      const mapped = mergeVisibility((data ?? []).map(toViewModel), cached);
+      const data = await apiFetch<Array<SupabaseDepartmentRow & {
+        ma_phong?: string;
+        ten_phong?: string;
+        nam_thanh_lap?: number;
+        trang_thai?: DepartmentStatus;
+      }>>(buildApiUrl('/departments'));
+      const mapped = mergeVisibility(
+        (data ?? []).map((row) =>
+          row.code || row.ma_phong
+            ? toViewModel({
+                id: String(row.id),
+                code: row.code ?? (row.ma_phong as string),
+                name: row.name ?? (row.ten_phong as string),
+                founded_year: row.founded_year ?? row.nam_thanh_lap,
+                status: row.status ?? row.trang_thai ?? 'active',
+              })
+            : toViewModel(row)
+        ),
+        cached
+      );
       saveLocalDepartments(mapped);
       return mapped;
     } catch (error) {
@@ -118,34 +128,80 @@ export const departmentsService = {
     }
   },
   async create(payload: DepartmentPayload): Promise<DepartmentViewModel> {
-    if (!supabase) {
-      // Fallback local-only khi thiếu Supabase
-      const record = this.createLocalRecord(payload, () => crypto.randomUUID?.() ?? Date.now().toString());
+    try {
+      const { id } = await apiFetch<{ id: string }>(buildApiUrl('/departments'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maPhong: payload.maPhong,
+          tenPhong: payload.tenPhong,
+          namThanhLap: payload.namThanhLap,
+          trangThai: payload.trangThai,
+        }),
+      });
+      return {
+        id: id ?? crypto.randomUUID?.() ?? Date.now().toString(),
+        maPhong: payload.maPhong,
+        tenPhong: payload.tenPhong,
+        namThanhLap: payload.namThanhLap,
+        trangThai: payload.trangThai,
+        visible: true,
+      };
+    } catch (error) {
+      console.warn('Không thể tạo phòng ban trên backend, lưu local.', error);
+      const record = this.createLocalRecord(
+        payload,
+        () => crypto.randomUUID?.() ?? Date.now().toString()
+      );
       const existing = getLocalDepartments().filter((row) => row.id !== record.id);
       const next = [...existing, record];
       saveLocalDepartments(next);
       return record;
     }
-    const body = toBackendPayload(payload);
-    const { data, error } = await supabase
-      .from('departments')
-      .insert(body)
-      .select('id, code, name, founded_year, status')
-      .single();
-    if (error || !data) {
-      throw error ?? new Error('Không thể tạo phòng ban.');
-    }
-    return toViewModel(data);
   },
   async update(
     departmentId: string,
     payload: Partial<DepartmentPayload>
   ): Promise<DepartmentViewModel> {
-    if (!supabase) {
+    try {
+      await apiFetch(buildApiUrl(`/departments/${departmentId}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maPhong: payload.maPhong,
+          tenPhong: payload.tenPhong,
+          namThanhLap: payload.namThanhLap,
+          trangThai: payload.trangThai,
+        }),
+      });
       const cached = getLocalDepartments();
       const updated = cached.map((row) =>
         row.id === departmentId
-          ? { ...row, ...payload, maPhong: payload.maPhong ?? row.maPhong, tenPhong: payload.tenPhong ?? row.tenPhong }
+          ? {
+              ...row,
+              maPhong: payload.maPhong ?? row.maPhong,
+              tenPhong: payload.tenPhong ?? row.tenPhong,
+              namThanhLap: payload.namThanhLap ?? row.namThanhLap,
+              trangThai: payload.trangThai ?? row.trangThai,
+            }
+          : row
+      );
+      saveLocalDepartments(updated);
+      const found = updated.find((r) => r.id === departmentId);
+      if (!found) throw new Error('Không tìm thấy phòng ban để cập nhật (local).');
+      return found;
+    } catch (error) {
+      console.warn('Không thể cập nhật phòng ban trên backend, lưu local.', error);
+      const cached = getLocalDepartments();
+      const updated = cached.map((row) =>
+        row.id === departmentId
+          ? {
+              ...row,
+              maPhong: payload.maPhong ?? row.maPhong,
+              tenPhong: payload.tenPhong ?? row.tenPhong,
+              namThanhLap: payload.namThanhLap ?? row.namThanhLap,
+              trangThai: payload.trangThai ?? row.trangThai,
+            }
           : row
       );
       saveLocalDepartments(updated);
@@ -153,27 +209,16 @@ export const departmentsService = {
       if (!found) throw new Error('Không tìm thấy phòng ban để cập nhật (local).');
       return found;
     }
-    const body = toBackendPayload(payload);
-    const { data, error } = await supabase
-      .from('departments')
-      .update(body)
-      .eq('id', departmentId)
-      .select('id, code, name, founded_year, status')
-      .single();
-    if (error || !data) {
-      throw error ?? new Error('Không thể cập nhật phòng ban.');
-    }
-    return toViewModel(data);
   },
   async remove(departmentId: string): Promise<void> {
-    if (!supabase) {
+    try {
+      await apiFetch(buildApiUrl(`/departments/${departmentId}`), { method: 'DELETE' });
       const next = getLocalDepartments().filter((row) => row.id !== departmentId);
       saveLocalDepartments(next);
-      return;
-    }
-    const { error } = await supabase.from('departments').delete().eq('id', departmentId);
-    if (error) {
-      throw error;
+    } catch (error) {
+      console.warn('Không xóa được phòng ban trên backend, lưu local.', error);
+      const next = getLocalDepartments().filter((row) => row.id !== departmentId);
+      saveLocalDepartments(next);
     }
   },
 };
